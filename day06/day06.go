@@ -41,31 +41,45 @@ func Solve(input string) (int64, int64, error) {
 	if start.r < 0 {
 		return 0, 0, fmt.Errorf("guard not found")
 	}
-	visited, _ := walk(lines, start, point{-1, -1})
+	rows, cols := len(lines), len(lines[0])
+	seen := make([]uint32, rows*cols*len(dirs))
+	visited := make([]bool, rows*cols)
+	walk(lines, start, point{-1, -1}, seen, 1, visited)
+	var visitedCount int64
 	var loops int64
-	for p := range visited {
-		if p != start && lines[p.r][p.c] == '.' {
-			_, loop := walk(lines, start, p)
-			if loop {
-				loops++
-			}
+	var generation uint32 = 1
+	for cell, ok := range visited {
+		if !ok {
+			continue
+		}
+		visitedCount++
+		p := point{cell / cols, cell % cols}
+		if p == start || lines[p.r][p.c] != '.' {
+			continue
+		}
+		generation++
+		if walk(lines, start, p, seen, generation, nil) {
+			loops++
 		}
 	}
-	return int64(len(visited)), loops, nil
+	return visitedCount, loops, nil
 }
 
-func walk(grid []string, start, obstacle point) (map[point]bool, bool) {
-	seen, visited := map[state]bool{}, map[point]bool{}
+func walk(grid []string, start, obstacle point, seen []uint32, generation uint32, visited []bool) bool {
+	cols := len(grid[0])
 	s := state{start, 0}
 	for {
-		if seen[s] {
-			return visited, true
+		stateIndex := ((s.r*cols + s.c) << 2) | s.d
+		if seen[stateIndex] == generation {
+			return true
 		}
-		seen[s] = true
-		visited[s.point] = true
+		seen[stateIndex] = generation
+		if visited != nil {
+			visited[s.r*cols+s.c] = true
+		}
 		n := point{s.r + dirs[s.d].r, s.c + dirs[s.d].c}
 		if n.r < 0 || n.r >= len(grid) || n.c < 0 || n.c >= len(grid[0]) {
-			return visited, false
+			return false
 		}
 		if grid[n.r][n.c] == '#' || n == obstacle {
 			s.d = (s.d + 1) % 4

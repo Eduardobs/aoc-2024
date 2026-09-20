@@ -18,28 +18,33 @@ func solveFile() (int64, int64, error) {
 }
 
 func Solve(input string) (int64, int64, error) {
+	const (
+		changes      = 19
+		sequenceKeys = changes * changes * changes * changes
+		lastThree    = changes * changes * changes
+	)
 	var part1 int64
-	totals := map[[4]int]int64{}
-	for _, s := range strings.Fields(input) {
+	totals := make([]int64, sequenceKeys)
+	seen := make([]int, sequenceKeys)
+	for buyer, s := range strings.Fields(input) {
 		secret, e := strconv.ParseInt(s, 10, 64)
 		if e != nil {
 			return 0, 0, e
 		}
-		prices := make([]int, 2001)
-		prices[0] = int(secret % 10)
+		previousPrice := int(secret % 10)
+		key := 0
+		stamp := buyer + 1
 		for i := 1; i <= 2000; i++ {
 			secret = next(secret)
-			prices[i] = int(secret % 10)
-		}
-		part1 += secret
-		seen := map[[4]int]bool{}
-		for i := 4; i <= 2000; i++ {
-			seq := [4]int{prices[i-3] - prices[i-4], prices[i-2] - prices[i-3], prices[i-1] - prices[i-2], prices[i] - prices[i-1]}
-			if !seen[seq] {
-				seen[seq] = true
-				totals[seq] += int64(prices[i])
+			price := int(secret % 10)
+			key = (key%lastThree)*changes + price - previousPrice + 9
+			previousPrice = price
+			if i >= 4 && seen[key] != stamp {
+				seen[key] = stamp
+				totals[key] += int64(price)
 			}
 		}
+		part1 += secret
 	}
 	var part2 int64
 	for _, n := range totals {
@@ -51,7 +56,8 @@ func Solve(input string) (int64, int64, error) {
 }
 
 func next(n int64) int64 {
-	n = (n ^ (n * 64)) % 16777216
-	n = (n ^ (n / 32)) % 16777216
-	return (n ^ (n * 2048)) % 16777216
+	const mask = 1<<24 - 1
+	n = (n ^ (n << 6)) & mask
+	n = (n ^ (n >> 5)) & mask
+	return (n ^ (n << 11)) & mask
 }

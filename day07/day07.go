@@ -36,10 +36,11 @@ func Solve(input string) (int64, int64, error) {
 				return 0, 0, e
 			}
 		}
-		if possible(target, nums, false) {
+		part1Possible := possible(target, nums, false)
+		if part1Possible {
 			p1 += target
 		}
-		if possible(target, nums, true) {
+		if part1Possible || possible(target, nums, true) {
 			p2 += target
 		}
 	}
@@ -50,30 +51,80 @@ func possible(target int64, nums []int64, concat bool) bool {
 	if len(nums) == 0 {
 		return false
 	}
+	if target < 0 {
+		return possibleForward(target, nums, concat)
+	}
+	for _, n := range nums {
+		if n < 0 {
+			return possibleForward(target, nums, concat)
+		}
+	}
+
 	type state struct {
 		i int
 		v int64
 	}
 	failed := map[state]bool{}
 	var search func(int, int64) bool
-	search = func(i int, v int64) bool {
-		if i == len(nums) {
-			return v == target
+	search = func(i int, wanted int64) bool {
+		if i == 0 {
+			return wanted == nums[0]
 		}
-		current := state{i, v}
+		current := state{i, wanted}
 		if failed[current] {
 			return false
 		}
 		n := nums[i]
-		if search(i+1, v+n) || search(i+1, v*n) {
+		if wanted >= n && search(i-1, wanted-n) {
+			return true
+		}
+		if n == 0 {
+			if wanted == 0 {
+				return true
+			}
+		} else if wanted%n == 0 && search(i-1, wanted/n) {
+			return true
+		}
+		if concat && wanted >= n {
+			power := int64(10)
+			for x := n; x >= 10; x /= 10 {
+				power *= 10
+			}
+			if wanted%power == n && search(i-1, wanted/power) {
+				return true
+			}
+		}
+		failed[current] = true
+		return false
+	}
+	return search(len(nums)-1, target)
+}
+
+func possibleForward(target int64, nums []int64, concat bool) bool {
+	type state struct {
+		i int
+		v int64
+	}
+	failed := map[state]bool{}
+	var search func(int, int64) bool
+	search = func(i int, value int64) bool {
+		if i == len(nums) {
+			return value == target
+		}
+		current := state{i, value}
+		if failed[current] {
+			return false
+		}
+		n := nums[i]
+		if search(i+1, value+n) || search(i+1, value*n) {
 			return true
 		}
 		if concat {
-			p := int64(10)
+			power := int64(10)
 			for x := n; x >= 10; x /= 10 {
-				p *= 10
+				power *= 10
 			}
-			if search(i+1, v*p+n) {
+			if search(i+1, value*power+n) {
 				return true
 			}
 		}

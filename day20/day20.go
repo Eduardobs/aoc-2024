@@ -33,25 +33,38 @@ func SolveWithSaving(input string, saving int) (int64, int64, error) {
 			}
 		}
 	}
+	rows, cols := len(g), len(g[0])
 	ds, de := distances(g, start), distances(g, end)
-	normal, ok := ds[end]
-	if !ok {
+	normal := ds[end.r*cols+end.c]
+	if normal < 0 {
 		return 0, 0, fmt.Errorf("no path")
 	}
 	count := func(limit int) int64 {
+		type offset struct{ dr, dc, distance int }
+		offsets := make([]offset, 0, 2*limit*(limit+1))
+		for dr := -limit; dr <= limit; dr++ {
+			remain := limit - abs(dr)
+			for dc := -remain; dc <= remain; dc++ {
+				distance := abs(dr) + abs(dc)
+				if distance >= 2 {
+					offsets = append(offsets, offset{dr, dc, distance})
+				}
+			}
+		}
 		var n int64
-		for a, da := range ds {
-			for dr := -limit; dr <= limit; dr++ {
-				remain := limit - abs(dr)
-				for dc := -remain; dc <= remain; dc++ {
-					length := abs(dr) + abs(dc)
-					if length < 2 {
-						continue
-					}
-					b := point{a.r + dr, a.c + dc}
-					if db, ok := de[b]; ok && normal-(da+length+db) >= saving {
-						n++
-					}
+		for cell, da := range ds {
+			if da < 0 {
+				continue
+			}
+			r, c := cell/cols, cell%cols
+			for _, offset := range offsets {
+				br, bc := r+offset.dr, c+offset.dc
+				if br < 0 || br >= rows || bc < 0 || bc >= cols {
+					continue
+				}
+				db := de[br*cols+bc]
+				if db >= 0 && normal-(da+offset.distance+db) >= saving {
+					n++
 				}
 			}
 		}
@@ -59,19 +72,28 @@ func SolveWithSaving(input string, saving int) (int64, int64, error) {
 	}
 	return count(2), count(20), nil
 }
-func distances(g []string, start point) map[point]int {
-	d := map[point]int{start: 0}
-	q := []point{start}
-	for len(q) > 0 {
-		p := q[0]
-		q = q[1:]
+func distances(g []string, start point) []int {
+	rows, cols := len(g), len(g[0])
+	d := make([]int, rows*cols)
+	for i := range d {
+		d[i] = -1
+	}
+	startIndex := start.r*cols + start.c
+	d[startIndex] = 0
+	q := make([]int, 1, rows*cols)
+	q[0] = startIndex
+	for head := 0; head < len(q); head++ {
+		cell := q[head]
+		p := point{cell / cols, cell % cols}
 		for _, v := range dirs {
 			n := point{p.r + v.r, p.c + v.c}
-			if n.r >= 0 && n.r < len(g) && n.c >= 0 && n.c < len(g[0]) && g[n.r][n.c] != '#' {
-				if _, ok := d[n]; !ok {
-					d[n] = d[p] + 1
-					q = append(q, n)
-				}
+			if n.r < 0 || n.r >= rows || n.c < 0 || n.c >= cols || g[n.r][n.c] == '#' {
+				continue
+			}
+			next := n.r*cols + n.c
+			if d[next] < 0 {
+				d[next] = d[cell] + 1
+				q = append(q, next)
 			}
 		}
 	}
