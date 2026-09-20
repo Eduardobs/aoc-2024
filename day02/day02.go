@@ -1,7 +1,7 @@
 package day02
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -18,39 +18,39 @@ func SecondProblem() (int64, error) {
 func Solution1() (int64, error) {
 	content, err := os.ReadFile("./day02/input.txt")
 	if err != nil {
-		return -1, errors.New("file not found")
+		return 0, fmt.Errorf("read day 2 input: %w", err)
 	}
-	lines := strings.Split(string(content), "\n")
-
-	count := 0
-
-	for i := 0; i < len(lines); i++ {
-		list, _ := toInt(strings.Fields(lines[i]))
-
-		if safe(list) {
-			count++
-		}
-	}
-	return int64(count), nil
+	return solve(string(content), false)
 }
 
 func Solution2() (int64, error) {
 	content, err := os.ReadFile("./day02/input.txt")
 	if err != nil {
-		return -1, errors.New("file not found")
+		return 0, fmt.Errorf("read day 2 input: %w", err)
 	}
-	lines := strings.Split(string(content), "\n")
+	return solve(string(content), true)
+}
 
-	count := 0
+func solve(input string, dampener bool) (int64, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return 0, nil
+	}
+	lines := strings.Split(input, "\n")
 
-	for i := 0; i < len(lines); i++ {
-		list, _ := toInt(strings.Fields(lines[i]))
+	var count int64
 
-		if safe(list) || safeByRemoving(list) {
+	for i, line := range lines {
+		list, err := toInt(strings.Fields(line))
+		if err != nil {
+			return 0, fmt.Errorf("day 2 line %d: %w", i+1, err)
+		}
+
+		if safe(list) || dampener && safeByRemoving(list) {
 			count++
 		}
 	}
-	return int64(count), nil
+	return count, nil
 }
 
 func toInt(xs []string) ([]int, error) {
@@ -66,6 +66,10 @@ func toInt(xs []string) ([]int, error) {
 }
 
 func safe(xs []int) bool {
+	if len(xs) < 2 {
+		return true
+	}
+
 	asc := xs[1]-xs[0] > 0
 
 	for i := 1; i < len(xs); i++ {
