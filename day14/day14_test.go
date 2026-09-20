@@ -24,3 +24,16 @@ func TestSample(t *testing.T) {
 		t.Fatalf("part 1 = %d, want 12", part1)
 	}
 }
+
+func TestPart2UsesFirstNonOverlappingArrangement(t *testing.T) {
+	input := `p=0,0 v=0,0
+p=1,0 v=-1,0`
+
+	_, part2, err := SolveWithSize(input, 5, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if part2 != 0 {
+		t.Fatalf("part 2 = %d, want 0", part2)
+	}
+}

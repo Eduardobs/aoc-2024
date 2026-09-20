@@ -43,32 +43,29 @@ func SolveWithSize(input string, w, h int) (int64, int64, error) {
 		counts[q]++
 	}
 	p1 := int64(counts[0] * counts[1] * counts[2] * counts[3])
-	bestT, bestArea := 0, int64(^uint64(0)>>1)
+	treeTime := -1
 	period := lcm(w, h)
 	for t := 0; t < period; t++ {
-		minx, maxx, miny, maxy := w, 0, h, 0
+		occupied := make(map[int]struct{}, len(rs))
+		allDistinct := true
 		for _, r := range rs {
 			x, y := mod(r.x+t*r.vx, w), mod(r.y+t*r.vy, h)
-			if x < minx {
-				minx = x
+			position := y*w + x
+			if _, exists := occupied[position]; exists {
+				allDistinct = false
+				break
 			}
-			if x > maxx {
-				maxx = x
-			}
-			if y < miny {
-				miny = y
-			}
-			if y > maxy {
-				maxy = y
-			}
+			occupied[position] = struct{}{}
 		}
-		area := int64((maxx - minx + 1) * (maxy - miny + 1))
-		if area < bestArea {
-			bestArea = area
-			bestT = t
+		if allDistinct {
+			treeTime = t
+			break
 		}
 	}
-	return p1, int64(bestT), nil
+	if treeTime < 0 {
+		return 0, 0, fmt.Errorf("robots never form a non-overlapping arrangement")
+	}
+	return p1, int64(treeTime), nil
 }
 func mod(a, n int) int {
 	a %= n
